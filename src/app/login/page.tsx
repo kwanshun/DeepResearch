@@ -1,28 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Chrome, Loader2 } from 'lucide-react';
+import { Chrome, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'not_authorized') {
+      setError('Your email is not on the whitelist. Please contact an administrator for access.');
+    }
+  }, [searchParams]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
       if (error) throw error;
     } catch (error) {
       console.error('Login error:', error);
+      setError('An error occurred during login. Please try again.');
       setLoading(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    await supabase.auth.signOut();
+    window.location.href = '/login';
   };
 
   return (
@@ -41,6 +62,23 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+            {error && (
+              <div className="flex flex-col gap-3 rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <p>{error}</p>
+                </div>
+                {searchParams.get('error') === 'not_authorized' && (
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0 text-red-800 underline dark:text-red-400 self-start"
+                    onClick={handleSignOut}
+                  >
+                    Sign out and try another account
+                  </Button>
+                )}
+              </div>
+            )}
             <Button
               variant="outline"
               type="button"

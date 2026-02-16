@@ -8,12 +8,10 @@ All development must strictly adhere to the following structure:
 
 - `/src/app`: Next.js App Router. Contains pages, layouts, and API routes.
   - `/src/app/deep_research`: Main Deep Research application.
-  - `/src/app/my_app`: Webapp listing application.
   - `/src/app/api/deep_research`: API routes for Deep Research.
 - `/src/components`: React components.
   - `/src/components/ui`: Shadcn/ui atomic components.
   - `/src/components/deep_research`: Components for the Deep Research app.
-  - `/src/components/my_app`: Components for the My App application.
 - `/src/lib`: Shared utility instances and core SDK initializations.
   - `gemini.ts`: `@google/genai` client setup.
   - `supabase.ts`: `@supabase/supabase-js` client setup.

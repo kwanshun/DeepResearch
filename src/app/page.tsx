@@ -1,17 +1,27 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase-server';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center border-b">
-        <Link className="flex items-center justify-center" href="#">
+        <Link className="flex items-center justify-center" href="/">
           <span className="font-bold text-xl">DeepResearch AI</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link href="/login">
-            <Button variant="outline">Login</Button>
-          </Link>
+          {user ? (
+            <Button asChild variant="outline">
+              <Link href="/deep_research">Go to App</Link>
+            </Button>
+          ) : (
+            <Button asChild variant="outline">
+              <Link href="/login">Login</Link>
+            </Button>
+          )}
         </nav>
       </header>
       <main className="flex-1">
@@ -28,9 +38,11 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="space-x-4">
-                <Link href="/login">
-                  <Button size="lg">Get Started</Button>
-                </Link>
+                <Button asChild size="lg">
+                  <Link href={user ? "/deep_research" : "/login"}>
+                    {user ? "Enter Workspace" : "Get Started"}
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>

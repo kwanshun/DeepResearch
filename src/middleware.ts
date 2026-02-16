@@ -24,26 +24,48 @@ export async function updateSession(request: NextRequest) {
           )
         },
       },
+      db: {
+        schema: 'deep_research',
+      },
     }
   )
 
   // Do not use getUser() here if you want to keep the middleware fast.
   // getSession() is sufficient for refreshing the session.
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Protect routes: Redirect to /login if there is no session
   const isLoginPage = request.nextUrl.pathname === '/login'
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth')
 
-  if (!session && !isLoginPage && !isAuthCallback) {
-    const loginUrl = new URL('/login', request.url)
-    return NextResponse.redirect(loginUrl)
+  if (!user) {
+    if (!isLoginPage && !isAuthCallback) {
+      const loginUrl = new URL('/login', request.url)
+      return NextResponse.redirect(loginUrl)
+    }
+    return supabaseResponse
   }
 
-  // Redirect to / if session exists and user is on /login
-  if (session && isLoginPage) {
-    const homeUrl = new URL('/', request.url)
-    return NextResponse.redirect(homeUrl)
+  // If user exists, check whitelist
+  const { data: whitelistEntry } = await supabase
+    .from('whitelist')
+    .select('email')
+    .eq('email', user.email)
+    .single();
+
+  if (whitelistEntry) {
+    // Whitelisted user: Redirect to deep_research if they are on login page or landing page
+    if (isLoginPage || request.nextUrl.pathname === '/') {
+      const appUrl = new URL('/deep_research', request.url)
+      return NextResponse.redirect(appUrl)
+    }
+  } else {
+    // Logged in but NOT whitelisted
+    if (!isLoginPage && !isAuthCallback) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('error', 'not_authorized')
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
   return supabaseResponse
