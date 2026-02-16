@@ -309,7 +309,7 @@ export default function ResearchPage() {
 
   return (
     <TooltipProvider>
-      <ResizablePanelGroup direction="horizontal" className="h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal" className="h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
         {/* Left Panel: Chat */}
         <ResizablePanel defaultSize={50} minSize={20} className="h-full">
           <div className="h-full border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
@@ -579,9 +579,9 @@ export default function ResearchPage() {
                 remarkPlugins={[remarkGfm]}
                 components={{
                   pre: ({ node, ...props }) => (
-                    <div className="not-prose my-6 shadow-sm ring-1 ring-zinc-200 rounded-lg overflow-hidden bg-zinc-50/50">
+                    <span className="not-prose my-6 shadow-sm ring-1 ring-zinc-200 rounded-lg overflow-hidden bg-zinc-50/50 block">
                       {props.children}
-                    </div>
+                    </span>
                   ),
                   code: ({ node, inline, className, children, ...props }: any) => {
                     const match = /language-(\w+)/.exec(className || '');
@@ -590,16 +590,20 @@ export default function ResearchPage() {
                         <SyntaxHighlighter
                           language={match ? match[1] : 'text'}
                           style={codeTheme}
+                          PreTag="span"
+                          CodeTag="span"
                           customStyle={{
                             margin: 0,
                             padding: '1.5rem',
                             fontSize: '0.875rem',
                             lineHeight: '1.5',
                             background: 'transparent',
+                            display: 'block',
                           }}
                           codeTagProps={{
                             style: {
                               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                              display: 'block',
                             }
                           }}
                           {...props}
