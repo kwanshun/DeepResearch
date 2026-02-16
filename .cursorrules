@@ -1,0 +1,36 @@
+# Deep Research Project Rules
+
+## Tech Stack
+- **Framework:** Next.js 16 (App Router)
+- **Backend/DB:** Supabase (Database, Auth, Realtime)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **AI SDK:** @google/genai SDK (v2.0+)
+
+## 1. Gemini Deep Research (Agentic)
+- **Engine:** Use the Interactions API with `agent: "deep-research-pro-preview-12-2025"`.
+- **Async Workflow:** Deep Research takes 5-20 minutes. 
+  - **Initiation:** Start tasks in a Route Handler using `background: true` and `store: true`.
+  - **Polling:** Implement a GET route `/api/research/status/[id]` to poll `client.interactions.get(id)`.
+  - **Persistence:** Immediately save the `interaction_id` to the `research_sessions` table in Supabase.
+- **Thinking Summaries:** Access `thinking_summaries` from the interaction object to provide live UI updates (e.g., "Browsing sources...", "Synthesizing report...").
+
+## 2. Gemini 3 Models (Chat & Logic)
+- **Coding & Chat:** Use `gemini-3-flash-preview` for all chat-to-edit features and code generation. It is faster and has a higher SWE-bench score (78%) than Pro for iterative coding.
+- **System Role:** The chat model is a "Document Architect." It receives the current `report_markdown` and user feedback. It must return updated markdown sections wrapped in `<updated_report>` tags.
+- **Thinking Level:** For complex document merges, set `thinking_level: "high"`. For quick chat questions, use `thinking_level: "low"` to save latency.
+
+## 3. Database & State Management
+- **Supabase Realtime:** Enable Realtime on the `research_sessions` table.
+- **Client Sync:** The frontend MUST subscribe to the row via `supabase.channel().on('postgres_changes', ...)`. When the background research worker updates the `report_markdown` column, the UI must reflect it instantly.
+- **Data Safety:** Store full research citations in a JSONB column `sources` so they can be rendered as hoverable tooltips in the UI.
+
+## 4. Security & Environment
+- **Zero-Hardcoding:** NEVER hardcode `GEMINI_API_KEY`. Use `process.env.GEMINI_API_KEY`.
+- **Server Boundaries:** The `@google/genai` client must ONLY be initialized and called in `app/api/` routes or Server Actions.
+- **Client Safety:** Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser. Only use the `anon` key for client-side Realtime subscriptions.
+- **Error Handling:** If an API key is missing, return a generic 500 error. Do not expose variable names in client-side logs.
+
+## 5. UI/UX Style
+- **Split-Panel Layout:** Left side = Chat (scrollable history). Right side = Document (Markdown).
+- **Optimistic UI:** When the user sends a chat to "edit" the report, show a loading state on the document panel immediately.
+- **Citations:** Render markdown footnotes as interactive shadcn `Popover` or `Tooltip` components.
