@@ -46,25 +46,25 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // If user exists, check whitelist
-  const { data: whitelistEntry } = await supabase
-    .from('whitelist')
-    .select('email')
-    .eq('email', user.email)
-    .single();
+  // Whitelist check: If user exists, verify email is in whitelist
+  if (user && !isLoginPage && !isAuthCallback) {
+    const { data: whitelistEntry, error: whitelistError } = await supabase
+      .from('whitelist')
+      .select('email')
+      .eq('email', user.email)
+      .single();
 
-  if (whitelistEntry) {
-    // Whitelisted user: Redirect to deep_research if they are on login page or landing page
-    if (isLoginPage || request.nextUrl.pathname === '/') {
-      const appUrl = new URL('/deep_research', request.url)
-      return NextResponse.redirect(appUrl)
-    }
-  } else {
-    // Logged in but NOT whitelisted
-    if (!isLoginPage && !isAuthCallback) {
+    if (!whitelistEntry) {
+      // If not in whitelist, redirect to login with error
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('error', 'not_authorized')
       return NextResponse.redirect(loginUrl)
+    }
+
+    // Whitelisted user: Redirect to deep_research if they are on landing page or login page
+    if (isLoginPage || request.nextUrl.pathname === '/') {
+      const appUrl = new URL('/deep_research', request.url)
+      return NextResponse.redirect(appUrl)
     }
   }
 

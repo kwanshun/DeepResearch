@@ -66,7 +66,21 @@ export default function ResearchPage() {
       .order('created_at', { ascending: false })
       .limit(10);
     
-    if (data) setSessions(data);
+    if (data) {
+      // Robust parsing for chat_history in sessions list
+      const parsedSessions = data.map(s => {
+        let history = s.chat_history;
+        if (typeof history === 'string') {
+          try {
+            history = JSON.parse(history);
+          } catch (e) {
+            history = [];
+          }
+        }
+        return { ...s, chat_history: Array.isArray(history) ? history : [] };
+      });
+      setSessions(parsedSessions);
+    }
   };
 
   useEffect(() => {
@@ -108,12 +122,46 @@ export default function ResearchPage() {
         .single();
       
       if (data) {
+        console.log('Successfully loaded session data:', data);
         setSessionId(data.id);
-        setChatHistory(data.chat_history || []);
+        
+        // Handle potential double-encoded JSON or stringified JSONB
+        let parsedHistory = data.chat_history;
+        if (typeof parsedHistory === 'string') {
+          try {
+            parsedHistory = JSON.parse(parsedHistory);
+          } catch (e) {
+            console.error('Failed to parse chat_history string:', e);
+            parsedHistory = [];
+          }
+        }
+        setChatHistory(Array.isArray(parsedHistory) ? parsedHistory : []);
+        
         setReportMarkdown(data.report_markdown || '');
+        mainReportRef.current = data.report_markdown || '';
+        setActiveReportId('main');
         setSources(data.sources || []);
-        setReportHistory(data.report_history || []);
-        setAdditionalReports(data.additional_reports || []);
+        
+        let parsedReportHistory = data.report_history;
+        if (typeof parsedReportHistory === 'string') {
+          try {
+            parsedReportHistory = JSON.parse(parsedReportHistory);
+          } catch (e) {
+            parsedReportHistory = [];
+          }
+        }
+        setReportHistory(Array.isArray(parsedReportHistory) ? parsedReportHistory : []);
+        
+        let parsedAdditionalReports = data.additional_reports;
+        if (typeof parsedAdditionalReports === 'string') {
+          try {
+            parsedAdditionalReports = JSON.parse(parsedAdditionalReports);
+          } catch (e) {
+            parsedAdditionalReports = [];
+          }
+        }
+        setAdditionalReports(Array.isArray(parsedAdditionalReports) ? parsedAdditionalReports : []);
+        
         setStatus(data.status);
       }
     } catch (error) {
@@ -128,6 +176,13 @@ export default function ResearchPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory]);
+
+  // Update mainReportRef whenever reportMarkdown changes while on 'main' report
+  useEffect(() => {
+    if (activeReportId === 'main') {
+      mainReportRef.current = reportMarkdown;
+    }
+  }, [reportMarkdown, activeReportId]);
 
   // Supabase Realtime Subscription
   useEffect(() => {
