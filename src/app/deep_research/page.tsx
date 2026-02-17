@@ -82,9 +82,17 @@ export default function ResearchPage() {
   const [thinking, setThinking] = useState('');
   const [sessions, setSessions] = useState<any[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const mainReportRef = useRef<string>('');
+
+  const handleCopyReport = async () => {
+    if (!reportMarkdown) return;
+    await navigator.clipboard.writeText(reportMarkdown);
+    setReportCopied(true);
+    setTimeout(() => setReportCopied(false), 2000);
+  };
 
   const fetchSessions = async () => {
     const { data, error } = await supabase
@@ -484,16 +492,19 @@ export default function ResearchPage() {
                   <div className={cn(
                     "p-4 rounded-2xl max-w-[90%] shadow-sm transition-all",
                     msg.role === 'user' 
-                      ? "bg-blue-600 text-white ml-auto rounded-tr-none" 
+                      ? "bg-white border border-zinc-200 text-[#18181B] ml-auto rounded-tr-none" 
                       : "bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-tl-none text-zinc-800 dark:text-zinc-200"
                   )}>
                     <div className={cn(
                       "text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70",
-                      msg.role === 'user' ? "text-blue-100" : "text-zinc-400"
+                      msg.role === 'user' ? "text-zinc-500" : "text-zinc-400"
                     )}>
                       {msg.role === 'user' ? 'You' : 'Editor'}
                     </div>
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none">
+                    <div className={cn(
+                      "text-sm leading-relaxed whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none",
+                      msg.role === 'user' && "text-inherit prose-headings:text-inherit"
+                    )}>
                       {msg.type === 'plan' ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                       ) : (
@@ -560,18 +571,40 @@ export default function ResearchPage() {
                 <FileText className="w-5 h-5 text-emerald-500" />
                 Report Preview
               </div>
-              {status === 'researching' && (
-                <div className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full border border-blue-100 dark:border-blue-800/50">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Researching
-                </div>
-              )}
-              {isEditing && (
-                <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/50">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Updating
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                {status === 'researching' && (
+                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full border border-blue-100 dark:border-blue-800/50">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Researching
+                  </div>
+                )}
+                {isEditing && (
+                  <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/50">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Updating
+                  </div>
+                )}
+                {reportMarkdown && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 text-xs font-medium border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    onClick={handleCopyReport}
+                  >
+                    {reportCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        Copy Markdown
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
             
             {(reportHistory.length > 0 || additionalReports.length > 0) && (
