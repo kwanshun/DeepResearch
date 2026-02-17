@@ -1,53 +1,37 @@
-# Project Agents & Structure
+# Project Agents & Instructions
 
-This file provides guidance for AI agents working on the **Iterative Research Agent** project.
+This file provides behavioral guidance and coding conventions for AI agents working on the **Iterative Research Agent** project.
 
-## 📁 Folder Structure
+## 📁 Development Context
 
-All development must strictly adhere to the following structure:
+For the physical folder structure, detailed tech stack, and authentication flow, refer to **`ARCHITECTURE.md`**. All changes must respect the architectural boundaries and physical layout defined there.
 
-- `/src/app`: Next.js App Router. Contains pages, layouts, and API routes.
-  - `/src/app/deep_research`: Main Deep Research application.
-  - `/src/app/api/deep_research`: API routes for Deep Research.
-- `/src/components`: React components.
-  - `/src/components/ui`: Shadcn/ui atomic components.
-  - `/src/components/deep_research`: Components for the Deep Research app.
-- `/src/lib`: Shared utility instances and core SDK initializations.
-  - `gemini.ts`: `@google/genai` client setup.
-  - `supabase.ts`: `@supabase/supabase-js` client setup.
-- `/src/hooks`: Custom React hooks (e.g., `useSupabaseRealtime`).
-- `/src/types`: TypeScript definitions and Supabase table interfaces.
-- `/supabase/migrations`: SQL migration files for version control and database schema management.
-- `/docs`: Project documentation, reference APIs, and coding guidelines.
+## 🛠 Development Conventions
 
-## 🛠 Tech Stack Conventions
+All development must align with the architectural specifications in `ARCHITECTURE.md`. The following conventions must be followed by all agents and developers:
 
-### AI & SDKs
-- **SDK:** Always use `@google/genai`. Never use legacy libraries.
-- **Initialization:** Use `const ai = new GoogleGenAI({})` in `src/lib/gemini.ts`.
+### AI & SDK Usage
+- **SDK:** Always use `@google/genai` (v2.0+). Never use legacy libraries.
 - **Models:**
-  - `gemini-3-flash-preview` for general chat and UI updates.
-  - `gemini-3-pro-preview` for complex reasoning.
-  - `deep-research-pro-preview-12-2025` for the agentic research workflow.
-- **Thinking:** Use `thinking_level: "high"` for complex document merges/edits.
+  - Use `gemini-3-flash-preview` for general chat, UI updates, and most code generation.
+  - Use `gemini-3-pro-preview` only for complex reasoning tasks.
+  - Use `deep-research-pro-preview-12-2025` strictly for the agentic research interaction flow.
+- **Thinking Level:** Use `thinking_level: "high"` for complex document merges or edits; use `low` for quick chat questions to minimize latency.
 
-### Database (Supabase)
-- **Schema:** `deep_research` (Used to isolate this project from other tables in the `public` schema).
-- **Table:** `research_sessions`
-- **Migrations & Traceability:**
-  - All database schema changes (DDL) MUST be recorded in `/supabase/migrations/`.
-  - Even if SQL is applied manually in the Supabase Dashboard, it must be backported to a migration file to ensure the entire database build process is traceable and reproducible.
-  - This includes `CREATE SCHEMA`, `CREATE TABLE`, `GRANT` permissions, and `ALTER PUBLICATION` for Realtime.
-- **Realtime:** Always use Supabase Realtime for syncing the `report_markdown` and `chat_history` between the background research worker and the frontend.
-- **Client:** Configured in `src/lib/supabase.ts` to use `deep_research` by default. Use the `anon` key for client-side subscriptions; never expose the `service_role` key.
+### Database & State Management
+- **Supabase Clients:**
+  - Use `src/lib/supabase.ts` for browser-side client components.
+  - Use `src/lib/supabase-server.ts` for server-side components, API routes, or server actions.
+- **Migrations:** All database schema changes (DDL) MUST be recorded in `/supabase/migrations/`. Even if SQL is applied manually via the Supabase Dashboard, it must be backported to a migration file to ensure traceability.
+- **Realtime:** Always use Supabase Realtime for syncing `report_markdown` and `chat_history` between background processes and the frontend.
 
-### UI/UX
-- **Styling:** Tailwind CSS + shadcn/ui.
-- **Markdown:** Use `react-markdown` for rendering the living document.
-- **Layout:** Maintain a split-panel view (Chat on left, Document on right).
+### UI/UX & Rendering
+- **Markdown Hydration:** To prevent hydration errors, ensure no nested `<pre>` tags exist inside `<p>` tags during markdown rendering. Use `span` or `div` wrappers with `display: block` for custom code block components.
+- **Layout:** Use the provided `ResizablePanelGroup`, `ResizablePanel`, and `ResizableHandle` components from `@/components/ui/resizable` for split-panel views.
 
 ## 🤖 Agent Behaviors
-- **Code Generation:** All code generation and implementation tasks MUST strictly follow the guidelines in `Reference_Doc/codegen_instructions.md`.
-- **Document Architect:** When editing the report, wrap updated sections in `<updated_report>` tags.
-- **Safety:** Never hardcode API keys. Always use `process.env`.
-- **Zero-Guessing:** If a model version or API parameter is unclear, check `Reference_Doc/codegen_instructions.md`.
+- **Code Generation:** Strictly follow guidelines in `Reference_Doc/codegen_instructions.md`.
+- **Deep Research API:** For implementation details regarding the agentic research interaction (Interactions API), refer to **`Reference_Doc/Gemini_deep_research.md`**.
+- **Document Architect Role:** When editing research reports, wrap the updated markdown sections in `<updated_report>` tags.
+- **Safety Protocol:** NEVER hardcode API keys or secrets. Always use `process.env`.
+- **Zero-Guessing:** If a model parameter, API version, or convention is unclear, consult the relevant files in `Reference_Doc/` before proceeding.
