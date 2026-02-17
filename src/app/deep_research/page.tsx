@@ -129,7 +129,7 @@ export default function ResearchPage() {
       }
     };
     checkUser();
-  }, []);
+  }, [router, fetchSessions]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
