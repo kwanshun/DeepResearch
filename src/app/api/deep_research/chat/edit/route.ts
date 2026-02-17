@@ -115,8 +115,14 @@ RESPONSE RULES:
       });
     }
 
+    // Clean up markers from the message before saving to history to avoid UI noise
+    const cleanAiMessage = aiMessage
+      .replace(/<updated_report>[\s\S]*?<\/updated_report>/g, '')
+      .replace(/<additional_report type="[\s\S]*?">[\s\S]*?<\/additional_report>/g, '')
+      .trim() || 'Report updated successfully.';
+
     // Update Supabase
-    const finalHistory = [...updatedHistory, { role: 'assistant', content: aiMessage }];
+    const finalHistory = [...updatedHistory, { role: 'assistant', content: cleanAiMessage }];
     
     await supabase
       .from('research_sessions')

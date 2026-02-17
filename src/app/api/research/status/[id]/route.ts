@@ -29,7 +29,7 @@ export async function GET(
     // Fetch session to get interaction_id, ensuring it belongs to the user
     const { data: session, error: sessionError } = await supabase
       .from('research_sessions')
-      .select('interaction_id, status')
+      .select('interaction_id, status, report_markdown, sources')
       .eq('id', id)
       .eq('user_id', user.id) // Security: scope to user
       .single();
@@ -39,7 +39,11 @@ export async function GET(
     }
 
     if (session.status === 'completed') {
-      return NextResponse.json({ status: 'completed' });
+      return NextResponse.json({ 
+        status: 'completed',
+        report_markdown: session.report_markdown,
+        sources: session.sources
+      });
     }
 
     // Poll Gemini Interactions API
