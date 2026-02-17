@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { prompt } = await req.json();
+    const { prompt, plan } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ error: 'Prompt is required and must be a string' }, { status: 400 });
@@ -23,10 +23,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt is too long (max 5000 characters)' }, { status: 400 });
     }
 
+    const researchInput = plan 
+      ? `Research Task based on approved plan.
+TOPIC: ${prompt}
+
+PLAN:
+${plan}
+
+Execute research following this plan and produce the final report.`
+      : prompt;
+
     // Start Deep Research interaction
     const interaction = await (ai as any).interactions.create({
       agent: 'deep-research-pro-preview-12-2025',
-      input: prompt,
+      input: researchInput,
       background: true,
       store: true,
       agent_config: {

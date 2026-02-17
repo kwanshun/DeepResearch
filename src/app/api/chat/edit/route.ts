@@ -81,7 +81,7 @@ RESPONSE RULES:
       },
     });
 
-    const aiMessage = response.outputs?.[0]?.text || response.result || 'I have processed your request.';
+    const aiMessage = response.outputs?.[response.outputs?.length - 1]?.text || response.result || 'I have processed your request.';
     
     // Check for <updated_report> tags
     const updatedReportMatch = aiMessage.match(/<updated_report>([\s\S]*?)<\/updated_report>/);

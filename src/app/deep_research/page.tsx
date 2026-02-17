@@ -77,6 +77,8 @@ export default function ResearchPage() {
   const [status, setStatus] = useState<'idle' | 'researching' | 'completed' | 'failed'>('idle');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [researchPlan, setResearchPlan] = useState<string | null>(null);
   const [thinking, setThinking] = useState('');
   const [sessions, setSessions] = useState<any[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -134,6 +136,8 @@ export default function ResearchPage() {
     setSources([]);
     setStatus('idle');
     setThinking('');
+    setResearchPlan(null);
+    setIsPlanning(false);
   };
 
   const loadSession = async (id: string) => {
@@ -282,18 +286,57 @@ export default function ResearchPage() {
   const handleStartResearch = async () => {
     if (!prompt.trim()) return;
     setLoading(true);
+    setIsPlanning(true);
+    
+    // Add user prompt to chat
+    const initialPrompt = prompt;
+    setChatHistory([{ role: 'user', content: initialPrompt }]);
+    setPrompt('');
+
+    try {
+      const res = await fetch('/api/deep_research/research/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: initialPrompt }),
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.plan && data.plan !== 'Failed to generate plan.') {
+        setResearchPlan(data.plan);
+        setChatHistory(current => [...current, { 
+          role: 'assistant', 
+          content: data.plan,
+          type: 'plan' // Special type to render the "Proceed" button
+        }]);
+      } else {
+        throw new Error(data.error || 'Failed to generate a valid research plan.');
+      }
+    } catch (error: any) {
+      console.error('Research plan error:', error);
+      setChatHistory(current => [...current, { 
+        role: 'assistant', 
+        content: `Error: ${error.message || 'Failed to generate research plan.'} Please try again.` 
+      }]);
+    } finally {
+      setLoading(false);
+      setIsPlanning(false);
+    }
+  };
+
+  const handleConfirmResearch = async (plan: string, originalPrompt: string) => {
+    setLoading(true);
     setStatus('researching');
+    setResearchPlan(null); // Clear plan after starting
     
     try {
       const res = await fetch('/api/deep_research/research/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: originalPrompt, plan }),
       });
       const data = await res.json();
       if (data.id) {
         setSessionId(data.id);
-        setChatHistory([{ role: 'user', content: prompt }]);
         fetchSessions(); // Refresh history
       }
     } catch (error) {
@@ -301,7 +344,6 @@ export default function ResearchPage() {
       setStatus('idle');
     } finally {
       setLoading(false);
-      setPrompt('');
     }
   };
 
@@ -438,25 +480,46 @@ export default function ResearchPage() {
                 </div>
               )}
               {chatHistory.map((msg, i) => (
-                <div key={i} className={cn(
-                  "p-4 rounded-2xl max-w-[90%] shadow-sm transition-all",
-                  msg.role === 'user' 
-                    ? "bg-blue-600 text-white ml-auto rounded-tr-none" 
-                    : "bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-tl-none text-zinc-800 dark:text-zinc-200"
-                )}>
+                <div key={i} className="space-y-2">
                   <div className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70",
-                    msg.role === 'user' ? "text-blue-100" : "text-zinc-400"
+                    "p-4 rounded-2xl max-w-[90%] shadow-sm transition-all",
+                    msg.role === 'user' 
+                      ? "bg-blue-600 text-white ml-auto rounded-tr-none" 
+                      : "bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-tl-none text-zinc-800 dark:text-zinc-200"
                   )}>
-                    {msg.role === 'user' ? 'You' : 'Editor'}
+                    <div className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70",
+                      msg.role === 'user' ? "text-blue-100" : "text-zinc-400"
+                    )}>
+                      {msg.role === 'user' ? 'You' : 'Editor'}
+                    </div>
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none">
+                      {msg.type === 'plan' ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      ) : (
+                        msg.content
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                  
+                  {msg.type === 'plan' && !sessionId && status === 'idle' && (
+                    <div className="flex justify-center py-2">
+                      <Button 
+                        onClick={() => handleConfirmResearch(msg.content, chatHistory[0].content)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 px-8 py-6 rounded-xl text-lg font-bold gap-2 animate-in zoom-in-95 duration-300"
+                        disabled={loading}
+                      >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        Proceed with Research
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
               {loading && (
                 <div className="flex items-center gap-2 text-zinc-500 text-sm italic">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Agent is thinking...
+                  {isPlanning ? 'Agent is drafting a research plan...' : 'Agent is thinking...'}
                 </div>
               )}
             </div>
