@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { supabase } from '@/lib/supabase';
@@ -577,6 +578,16 @@ export default function ResearchPage() {
               )}
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[
+                  [rehypeSanitize, {
+                    ...defaultSchema,
+                    tagNames: [...(defaultSchema.tagNames || []), 'updated_report', 'additional_report'],
+                    attributes: {
+                      ...defaultSchema.attributes,
+                      'additional_report': ['type']
+                    }
+                  }]
+                ]}
                 components={{
                   pre: ({ node, ...props }) => (
                     <span className="not-prose my-6 shadow-sm ring-1 ring-zinc-200 rounded-lg overflow-hidden bg-zinc-50/50 block">

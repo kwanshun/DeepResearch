@@ -5,23 +5,25 @@ import { createClient } from '@/lib/supabase-server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in search params, use it as the redirection URL after callback
-  const next = searchParams.get('next') ?? '/'
+  // Validate "next" to prevent Open Redirects
+  let next = searchParams.get('next') ?? '/deep_research'
+  if (!next.startsWith('/') || next.startsWith('//')) {
+    next = '/deep_research'
+  }
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host') // Safe for Vercel
+      const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
+      
       if (isLocalEnv) {
-        // we can be sure that origin is localhost
         return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
         return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
       }
+      return NextResponse.redirect(`${origin}${next}`)
     }
   }
 

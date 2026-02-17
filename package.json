@@ -26,6 +26,7 @@
     "react-markdown": "^9.0.1",
     "react-resizable-panels": "^4.6.4",
     "react-syntax-highlighter": "^16.1.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.5.5"
   },
