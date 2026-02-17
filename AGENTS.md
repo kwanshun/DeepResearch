@@ -1,3 +1,8 @@
+---
+description: 
+alwaysApply: true
+---
+
 # Project Agents & Instructions
 
 This file provides behavioral guidance and coding conventions for AI agents working on the **Iterative Research Agent** project.

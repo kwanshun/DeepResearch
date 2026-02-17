@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import { createClient } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
+
 // Simple UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,7 +40,8 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    if (session.status === 'completed') {
+    // If already completed and has content, return it
+    if (session.status === 'completed' && session.report_markdown) {
       return NextResponse.json({ 
         status: 'completed',
         report_markdown: session.report_markdown,
@@ -50,23 +53,39 @@ export async function GET(
     const interaction = await (ai as any).interactions.get(session.interaction_id);
 
     if (interaction.status === 'completed') {
-      const reportMarkdown = interaction.outputs?.[0]?.text || '';
-      const sources = interaction.outputs?.[0]?.sources || [];
+      // Get the last output as per best practices in Gemini documentation
+      const lastOutput = interaction.outputs?.[interaction.outputs.length - 1];
+      const reportMarkdown = lastOutput?.text || '';
+      const sources = lastOutput?.sources || [];
 
-      await supabase
-        .from('research_sessions')
-        .update({
-          report_markdown: reportMarkdown,
-          sources: sources,
-          status: 'completed',
-        })
-        .eq('id', id)
-        .eq('user_id', user.id);
+      if (reportMarkdown) {
+        await supabase
+          .from('research_sessions')
+          .update({
+            report_markdown: reportMarkdown,
+            sources: sources,
+            status: 'completed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .eq('user_id', user.id);
+      } else if (session.status !== 'completed') {
+        // If report is still empty but Gemini says completed, we might need to wait or handle error
+        console.warn(`Gemini interaction ${session.interaction_id} completed but returned empty report.`);
+        await supabase
+          .from('research_sessions')
+          .update({
+            status: 'completed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .eq('user_id', user.id);
+      }
 
       return NextResponse.json({ 
         status: 'completed',
-        report_markdown: reportMarkdown,
-        sources: sources
+        report_markdown: reportMarkdown || session.report_markdown,
+        sources: sources.length > 0 ? sources : session.sources
       });
     }
 

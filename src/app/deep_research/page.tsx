@@ -16,14 +16,38 @@ const codeTheme = {
   'attr-name': { color: '#1a1a1a' },
   'tag': { color: '#1a1a1a' },
   'punctuation': { color: '#1a1a1a' },
+  'keyword': { color: '#005cc5' },
+  'function': { color: '#6f42c1' },
+  'comment': { color: '#6a737d', fontStyle: 'italic' },
 };
+
+function CopyButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+      onClick={handleCopy}
+    >
+      {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+    </Button>
+  );
+}
 
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Send, Loader2, FileText, MessageSquare, ExternalLink, History, Plus } from 'lucide-react';
+import { Send, Loader2, FileText, MessageSquare, ExternalLink, History, Plus, Copy, Check, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -352,7 +376,7 @@ export default function ResearchPage() {
                       <History className="w-4 h-4 text-zinc-500" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="end">
+                  <PopoverContent className="w-80 p-0 z-[100] bg-white dark:bg-zinc-950 shadow-2xl border-zinc-200 dark:border-zinc-800" align="end">
                     <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 font-medium text-sm">
                       Recent Sessions
                     </div>
@@ -415,13 +439,18 @@ export default function ResearchPage() {
               )}
               {chatHistory.map((msg, i) => (
                 <div key={i} className={cn(
-                  "p-3 rounded-lg max-w-[85%]",
-                  msg.role === 'user' ? "bg-blue-50 dark:bg-blue-900/20 ml-auto" : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                  "p-4 rounded-2xl max-w-[90%] shadow-sm transition-all",
+                  msg.role === 'user' 
+                    ? "bg-blue-600 text-white ml-auto rounded-tr-none" 
+                    : "bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-tl-none text-zinc-800 dark:text-zinc-200"
                 )}>
-                  <div className="text-sm font-medium mb-1 opacity-50">
+                  <div className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70",
+                    msg.role === 'user' ? "text-blue-100" : "text-zinc-400"
+                  )}>
                     {msg.role === 'user' ? 'You' : 'Editor'}
                   </div>
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
                 </div>
               ))}
               {loading && (
@@ -469,15 +498,15 @@ export default function ResearchPage() {
                 Report Preview
               </div>
               {status === 'researching' && (
-                <div className="text-xs font-normal text-zinc-500 flex items-center gap-2">
+                <div className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full border border-blue-100 dark:border-blue-800/50">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  {thinking || 'Deep Research in progress...'}
+                  Researching
                 </div>
               )}
               {isEditing && (
-                <div className="text-xs font-normal text-zinc-500 flex items-center gap-2">
+                <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/50">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Editor is updating report...
+                  Updating
                 </div>
               )}
             </div>
@@ -529,7 +558,7 @@ export default function ResearchPage() {
                         <History className="w-3 h-3" /> History
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0" align="start">
+                    <PopoverContent className="w-64 p-0 z-[100] bg-white dark:bg-zinc-950 shadow-2xl border-zinc-200 dark:border-zinc-800" align="start">
                       <div className="p-2 border-b text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Version History</div>
                       <ScrollArea className="h-48">
                         {reportHistory.map((v, i) => (
@@ -557,18 +586,34 @@ export default function ResearchPage() {
             
             <div className={cn(
               "flex-1 overflow-y-auto p-8 prose prose-zinc dark:prose-invert max-w-none transition-opacity",
-              "prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg",
-              "prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed",
-              "prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:my-1",
+              "prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-headings:mt-8 prose-headings:mb-4",
+              "prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:my-3",
+              "prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:my-1.5",
               "prose-strong:text-zinc-900 dark:prose-strong:text-zinc-100 prose-strong:font-bold",
               "prose-code:text-zinc-900 dark:prose-code:text-zinc-100 prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none",
               isEditing ? "opacity-50" : "opacity-100"
             )}>
               {status === 'researching' && !reportMarkdown && (
-                <div className="h-full flex flex-col items-center justify-center text-zinc-400 gap-4">
-                  <Loader2 className="w-10 h-10 animate-spin" />
-                  <p>Initializing Deep Research Agent...</p>
-                  <p className="text-sm italic">{thinking}</p>
+                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-6 py-12">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse" />
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-500 relative" />
+                  </div>
+                  <div className="text-center space-y-2 max-w-md">
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Deep Research in Progress</h3>
+                    <p className="text-sm text-zinc-500 leading-relaxed">
+                      Our AI agent is currently browsing sources, analyzing data, and synthesizing your report. This usually takes 5-15 minutes.
+                    </p>
+                  </div>
+                  <div className="w-full max-w-sm bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      Live Activity
+                    </div>
+                    <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400 italic">
+                      {thinking || 'Initializing research engine...'}
+                    </p>
+                  </div>
                 </div>
               )}
               {!reportMarkdown && status === 'idle' && (
@@ -589,23 +634,53 @@ export default function ResearchPage() {
                   }]
                 ]}
                 components={{
-                  pre: ({ node, ...props }) => (
-                    <span className="not-prose my-6 shadow-sm ring-1 ring-zinc-200 rounded-lg overflow-hidden bg-zinc-50/50 block">
-                      {props.children}
-                    </span>
-                  ),
-                  code: ({ node, inline, className, children, ...props }: any) => {
+                  pre: ({ node, children, ...props }: any) => {
+                    // Extract the actual code and language from children (which is the <code> element)
+                    const codeElement = children;
+                    const code = codeElement?.props?.children || '';
+                    const language = /language-(\w+)/.exec(codeElement?.props?.className || '')?.[1] || '';
+                    const isMultiLine = String(code).trim().includes('\n');
+                    
+                    return (
+                      <div className={cn(
+                        "not-prose shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800 rounded-lg overflow-hidden bg-zinc-50/50 dark:bg-zinc-900/50 block",
+                        isMultiLine ? "my-6" : "my-2"
+                      )}>
+                        {isMultiLine && (
+                          <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-800/50">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{language || 'text'}</span>
+                            <CopyButton content={String(code).replace(/\n$/, '')} />
+                          </div>
+                        )}
+                        <div className="relative group">
+                          {!isMultiLine && (
+                            <div className="absolute right-2 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <CopyButton content={String(code).replace(/\n$/, '')} />
+                            </div>
+                          )}
+                          {children}
+                        </div>
+                      </div>
+                    );
+                  },
+                  code: ({ node, className, children, ...props }: any) => {
                     const match = /language-(\w+)/.exec(className || '');
-                    if (!inline) {
+                    const isMultiLine = String(children).trim().includes('\n');
+                    
+                    // In react-markdown v9, the 'inline' prop is removed.
+                    // We use the presence of a language class or multiline content
+                    // to determine if it should be rendered as a block.
+                    // This avoids rendering a <div> (from SyntaxHighlighter) inside a <p> for inline code.
+                    if (match || isMultiLine) {
                       return (
                         <SyntaxHighlighter
                           language={match ? match[1] : 'text'}
                           style={codeTheme}
-                          PreTag="span"
-                          CodeTag="span"
+                          PreTag="div"
+                          CodeTag="div"
                           customStyle={{
                             margin: 0,
-                            padding: '1.5rem',
+                            padding: isMultiLine ? '1rem' : '0.5rem 3rem 0.5rem 0.75rem',
                             fontSize: '0.875rem',
                             lineHeight: '1.5',
                             background: 'transparent',
@@ -636,41 +711,64 @@ export default function ResearchPage() {
                     );
                   },
                   a: ({ node, ...props }) => {
-                    const citationIndex = props.children?.toString().match(/\[(\d+)\]/);
-                    if (citationIndex && sources.length > 0) {
-                      const idx = parseInt(citationIndex[1]) - 1;
-                      const source = sources[idx];
-                      if (source) {
-                        return (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <span className="cursor-pointer text-blue-600 hover:underline inline-flex items-center gap-0.5 font-medium">
-                                {props.children}
-                              </span>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80">
-                              <div className="space-y-2">
-                                <h4 className="font-medium leading-none">{source.title || 'Source'}</h4>
-                                <p className="text-sm text-zinc-500 line-clamp-3">
-                                  {source.snippet || source.url}
-                                </p>
-                                {source.url && (
-                                  <a 
-                                    href={source.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-blue-500 hover:underline flex items-center gap-1"
-                                  >
-                                    View Source <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                )}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        );
-                      }
+                    const href = props.href;
+                    const children = props.children?.toString() || '';
+                    const citationIndexMatch = children.match(/\[(\d+)\]/);
+                    
+                    let source = null;
+                    if (citationIndexMatch && sources.length > 0) {
+                      const idx = parseInt(citationIndexMatch[1]) - 1;
+                      source = sources[idx];
+                    } else if (href && sources.length > 0) {
+                      // Try to find source by URL if not a citation
+                      source = sources.find(s => s.url === href);
                     }
-                    return <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" />;
+
+                    if (source) {
+                      // If it's a regular link (not a citation) and the text looks like a domain or is generic, use the title
+                      const isGenericText = children.length < 40 && (
+                        children.includes('.') || 
+                        children.toLowerCase() === 'link' || 
+                        children.toLowerCase() === 'source' ||
+                        children.toLowerCase().startsWith('http')
+                      );
+                      const displayText = (isGenericText && source.title) ? source.title : children;
+
+                      return (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <span className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5 font-medium decoration-blue-300 dark:decoration-blue-700 underline-offset-4">
+                              {displayText}
+                              {!citationIndexMatch && <ExternalLink className="w-3 h-3 opacity-50" />}
+                            </span>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 z-[100] shadow-xl border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-bold text-sm leading-tight text-zinc-900 dark:text-zinc-100">{source.title || 'Source'}</h4>
+                                <div className="p-1 bg-zinc-100 dark:bg-zinc-800 rounded flex-shrink-0">
+                                  <Info className="w-3 h-3 text-zinc-400" />
+                                </div>
+                              </div>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-4">
+                                {source.snippet || 'No description available for this source.'}
+                              </p>
+                              {source.url && (
+                                <a 
+                                  href={source.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[10px] font-bold uppercase tracking-wider text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors w-full"
+                                >
+                                  Visit Source Website <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    }
+                    return <a {...props} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" />;
                   }
                 }}
               >

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import { createClient } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
+
 // Simple UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -29,7 +31,7 @@ export async function GET(
     // Fetch session to get interaction_id, ensuring it belongs to the user
     const { data: session, error: sessionError } = await supabase
       .from('research_sessions')
-      .select('interaction_id, status')
+      .select('interaction_id, status, report_markdown, sources')
       .eq('id', id)
       .eq('user_id', user.id) // Security: scope to user
       .single();
@@ -38,31 +40,60 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    if (session.status === 'completed') {
-      return NextResponse.json({ status: 'completed' });
+    // If already completed and has content, return it
+    if (session.status === 'completed' && session.report_markdown) {
+      return NextResponse.json({ 
+        status: 'completed',
+        report_markdown: session.report_markdown,
+        sources: session.sources
+      });
     }
 
     // Poll Gemini Interactions API
+    console.log(`Polling Gemini interaction: ${session.interaction_id}`);
     const interaction = await (ai as any).interactions.get(session.interaction_id);
+    console.log(`Interaction status: ${interaction.status}`);
 
     if (interaction.status === 'completed') {
-      const reportMarkdown = interaction.outputs?.[0]?.text || '';
-      const sources = interaction.outputs?.[0]?.sources || [];
+      // Get the last output as per best practices in Gemini documentation
+      const outputs = interaction.outputs || [];
+      console.log(`Interaction completed. Number of outputs: ${outputs.length}`);
+      
+      const lastOutput = outputs[outputs.length - 1];
+      const reportMarkdown = lastOutput?.text || '';
+      const sources = lastOutput?.sources || [];
 
-      await supabase
-        .from('research_sessions')
-        .update({
-          report_markdown: reportMarkdown,
-          sources: sources,
-          status: 'completed',
-        })
-        .eq('id', id)
-        .eq('user_id', user.id);
+      if (reportMarkdown) {
+        console.log(`Updating session ${id} with report content (${reportMarkdown.length} chars)`);
+        await supabase
+          .from('research_sessions')
+          .update({
+            report_markdown: reportMarkdown,
+            sources: sources,
+            status: 'completed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .eq('user_id', user.id);
+      } else {
+        console.warn(`Gemini interaction ${session.interaction_id} completed but returned empty report. Full interaction:`, JSON.stringify(interaction, null, 2));
+        // If report is still empty but Gemini says completed, we might need to wait or handle error
+        if (session.status !== 'completed') {
+          await supabase
+            .from('research_sessions')
+            .update({
+              status: 'completed',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .eq('user_id', user.id);
+        }
+      }
 
       return NextResponse.json({ 
         status: 'completed',
-        report_markdown: reportMarkdown,
-        sources: sources
+        report_markdown: reportMarkdown || session.report_markdown,
+        sources: sources.length > 0 ? sources : session.sources
       });
     }
 
